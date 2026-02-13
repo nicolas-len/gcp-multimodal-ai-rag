@@ -10,18 +10,16 @@ description: "How I built a practically free, serverless knowledge base on GCP u
 ![Cover image]({{ '/images/1-cover.jpeg' | relative_url }})
 
 ## The Backstory
-While I’m writing this in early 2026, this project actually dates back to late 2024 and early 2025. Consequently, the architecture was shaped by the specific tools available during that window. I had to innovate under strict constraints: the entire pipeline needed to run on GCP, adhere to data‑sovereignty requirements, and stick to a tight budget. Back then, I didn’t have the luxury of today’s parsing solutions like Google LangExtract or Mistral’s Document AI. Even Google’s native RAG Engine wasn't available in European regions yet. I realize the landscape has shifted dramatically; for those deploying cutting-edge agentic RAG systems in 2026, the tech stack might look a bit retro. However, this article is less about the specific tools and more about the architectural decision-making process. If you are interested in how to navigate constraints or need to build an AI-powered proprietary document library with minimal processing and maintenance costs, this is still very much worth reading. 
----
+*While I’m writing this in early 2026, this project actually dates back to late 2024 and early 2025. Consequently, the architecture was shaped by the specific tools available during that window. I had to innovate under ***strict constraints***: the entire pipeline needed to run on ***GCP***, adhere to ***data‑sovereignty requirements***, and stick to a ***tight budget***. Back then, I didn’t have the luxury of today’s parsing solutions like Google LangExtract or Mistral’s Document AI. Even Google’s native RAG Engine wasn't available in European regions yet. I realize the landscape has shifted dramatically; for those deploying cutting-edge agentic RAG systems in 2026, the tech stack might look a bit retro. However, this article is less about the specific tools and more about the ***architectural decision-making process***. If you are interested in how to navigate constraints or need to build an AI-powered proprietary document library with ***minimal processing and maintenance costs***, this is still very much worth reading.*
 
 ## The Problem: 10,000 Unstructured Documents
-In 2024, I was approached by the marketing team of a leading industrial manufacturer. They were sitting on a treasure trove of unique data: specialized industry articles, technical journals, and presentations buried in a chaotic labyrinth of Google Drive folders containing roughly 10,000 documents. The corpus was multimodal, consisting of primarily PDFs, but also Word documents, PPTs, and Excel files, all dense with text, tables, charts, and diagrams. Besides that, a considerable portion of the presentations consisted of slide images (photos) without OCR, making the text non-searchable and harder to extract. The ingestion pipeline was immutable: subject-matter experts (non-technical users) manually uploaded files monthly, and this workflow could not be altered. The good news was that along with Drive, I was provisioned a GCP environment. The catch was that I couldn't step outside it. I was restricted strictly to native services: no external APIs and no new vendors. Finally, I had to make it all work on a shoestring budget.
----
+In 2024, I was approached by the marketing team of a leading industrial manufacturer. They were sitting on a ***treasure trove of unique data***: specialized industry articles, technical journals, and presentations buried in a chaotic labyrinth of Google Drive folders containing ***roughly 10,000 documents***. The corpus was ***multimodal***, consisting of primarily PDFs, but also Word documents, PPTs, and Excel files, all dense with text, tables, charts, and diagrams. Besides that, a considerable portion of the presentations consisted of slide images (photos) without OCR, making the text non-searchable and harder to extract. The ingestion pipeline was ***immutable***: subject-matter experts (non-technical users) manually uploaded files monthly, and this workflow could not be altered. The good news was that along with Drive, I was provisioned a GCP environment. The catch was that I couldn't step outside it. I was ***restricted strictly to native services***: no external APIs and no new vendors. Finally, I had to make it all work on a ***shoestring budget***.
 
 ## Deliverables
 
 * **Vectorization for RAG:** Convert the entire corpus into embeddings and store it in a vector database for retrieval-augmented generation.
-* **Rich metadata extraction: Generate detailed metadata: keywords, summaries, and structured text descriptions of embedded visuals (graphs, charts, and tables) to enable grouping, organization, and document classification.
-* **Recognition of photo-based presentations: Parse slide decks made of images (no OCR / non-selectable text) add the extracted content to the vector database.
+* **Rich metadata extraction:** Generate detailed metadata: keywords, summaries, and structured text descriptions of embedded visuals (graphs, charts, and tables) to enable grouping, organization, and document classification.
+* **Recognition of photo-based presentations:** Parse slide decks made of images (no OCR / non-selectable text) add the extracted content to the vector database.
 * **Seamless ingestion (no workflow changes):** Users keep working as usual. New files land in Google Drive, and the system automatically ingests and processes them.
 * **Multimodal technical chatbot:** Provide a chatbot that can answer precise technical questions by understanding not only the text, but also charts, tables, and diagrams within the documents.
 * **Source-first answers with direct links:** Return citations with links to the relevant pages in GCS, plus the full document, so specialists can jump straight to the original material.
@@ -31,7 +29,6 @@ In 2024, I was approached by the marketing team of a leading industrial manufact
 **The Result:** I built a fully automated pipeline that parsed everything for **€50 total**. Maintenance costs? Practically zero, thanks to the GCP Free Tier.
 
 Here is the breakdown of how I did it.
----
 
 ## Parsing tool
 
@@ -81,7 +78,6 @@ Feel the difference.
 
 And pricing wasn’t the only reason a custom parser built on **Gemini 1.5 Flash** started to look like the right plan.
 
-
 ## What made Gemini 1.5 Flash the best parser beyond affordability?
 
 **Long context.** Gemini 1.5 Flash supports context windows up to **1 million tokens**, which effectively future-proofed my pipeline. In practical terms, that’s roughly **1,000,000 ÷ 258 ≈ 3,876 pages** of PDF content per request. Wildly convenient when you’re dealing with long reports.
@@ -103,14 +99,15 @@ That multimodal capability unlocked a few practical wins for the pipeline:
 
 **Surprisingly good math handling.** Gemini also did a nice job normalizing math expressions that used special Unicode symbols, converting them into clean, readable formulas rather than leaving behind broken glyphs.
 
-
 ### Is Gemini 1.5 Flash Truly an Out-of-the-Box Parser?
 
-It would be a developer’s **idyll** if everything stayed as smooth as the performance described above. Of course, **real life is rarely a bed of roses**, and I eventually encountered a single technical constraint that significantly shaped the parser's architecture: **the Output Token Limit.**
+It would be a developer’s idyll if everything stayed as smooth as the performance described above. Of course, real life is rarely a bed of roses, and I eventually encountered a single technical constraint that significantly shaped the parser's architecture: **the Output Token Limit.**
 
-While Gemini 1.5 Flash has a massive *input* context window, its *output* is capped at **8,192 tokens**. 
+While Gemini 1.5 Flash has a massive *input* context window, its *output* is capped at **8,192 tokens**.
 
-8192 output tokens ÷ 650 ≈ 12.60 pages 
+```text
+8192 output tokens ÷ 650 ≈ 12.60 pages
+```
 
 If I were to submit a 50-page technical manual for a full JSON extraction of every chart and table, the output would be substantial. It would inevitably exceed the 8,192-token limit, resulting in either a truncated response or an oversimplified summary rather than a complete parse.
 
@@ -146,7 +143,6 @@ Now that we’ve covered the conceptual rationale, let’s shift into the engine
 8. Update file registry statuses (`copied_to_gcs`, `parsed`, `added_to_bq`, timestamps).
 9. Add new chunks to BigQuery vector store via LangChain `BigQueryVectorStore` (filtering out very short chunks, e.g. <300 chars).
 
-
 ### Implementation Walkthrough: Code-Level Highlights
 
 ## 1) Control Plane First: `FILE_LIST`
@@ -171,7 +167,7 @@ Key libraries: `google-cloud-bigquery`
 | `added_to_bq` | `BOOL` | Corpus insertion completion flag |
 | `timestamp_added` | `DATETIME` | Corpus insertion timestamp |
 
-Snippet A shows the incremental principle: compare discovered files to known `file_id` values.
+Snippet shows the incremental principle: compare discovered files to known `file_id` values.
 
 ```python
 # table_id, bq_client, master_files are prepared above
@@ -182,6 +178,7 @@ existing_file_ids = {row["file_id"] for row in rows}
 new_files = [f for f in master_files if f["file_id"] not in existing_file_ids]
 ```
 Source files: [01_setup_bq_file_list.ipynb](https://github.com/nikolailen/ai_knowledge_base/blob/main/01_setup_bq_file_list.ipynb) (cell 2 lines 20-35; cell 4 lines 21-24), [03_parsing_tool.ipynb](https://github.com/nikolailen/ai_knowledge_base/blob/main/03_parsing_tool.ipynb) (cell 10 lines 8-21)
+Note: GitHub does not provide stable cell-level anchors for rendered `.ipynb` files, so notebook links point to the file and cell/line ranges are shown as text.
 
 ## 2) Drive Access and Resilient Discovery
 
@@ -218,7 +215,6 @@ def robust_files_list(service, query, max_retries=5, initial_wait=1):
                 raise
 ```
 Source files: [03_parsing_tool.ipynb](https://github.com/nikolailen/ai_knowledge_base/blob/main/03_parsing_tool.ipynb) (cell 8 lines 34-63)
-
 
 ## 3) Copy/Convert Stage: Normalize to PDF
 
@@ -318,7 +314,7 @@ Source files: [03_parsing_tool.ipynb](https://github.com/nikolailen/ai_knowledge
 
 #### 1) Programmatic foundation (non-LLM, first)
 
-Programmatic extraction creates the operational backbone of each record: stable IDs, file/page links, hashes, session timestamps, status flags, and token/model telemetry.  
+Programmatic extraction creates the operational backbone of each record: stable IDs, file/page links, hashes, session timestamps, status flags, and token/model telemetry.
 This layer is deterministic and is used for traceability, reruns, debugging, and cost analysis.
 
 #### 2) Whole-document LLM pass (second)
@@ -335,7 +331,7 @@ These fields are then attached to chunk records to improve grouping, thematic se
 
 #### 3) Per-page LLM chunk pass (third)
 
-Each page is parsed independently to avoid long-document token compression/truncation and to preserve local detail.  
+Each page is parsed independently to avoid long-document token compression/truncation and to preserve local detail.
 Chunking is object-centric rather than length-centric, with chunk types:
 
 - `text`
@@ -357,6 +353,8 @@ The table below maps all schema fields to:
 - scope: `Document` or `Page`
 - derivation: LLM vs programmatic
 - intent: what the field is used for
+
+<div markdown="1" style="max-height: 460px; overflow: auto;">
 
 | Field | Scope | Derived By | Purpose |
 |---|---|---|---|
@@ -405,6 +403,8 @@ The table below maps all schema fields to:
 | `aq_document_model_version` | Document | Programmatic | Reproducibility and regression comparison |
 | `ar_chunks_model_version` | Page | Programmatic | Reproducibility and regression comparison |
 
+</div>
+
 ## 6) Schema-Constrained Parsing
 
 The pipeline uses one schema principle across passes: force structured JSON outputs.
@@ -442,10 +442,9 @@ response = model_chunks.generate_content(contents, generation_config=config_chun
 ```
 Source files: [03_parsing_tool.ipynb](https://github.com/nikolailen/ai_knowledge_base/blob/main/03_parsing_tool.ipynb) (cell 22 lines 1-11)
 
-
 ## 7) Direct URI Multimodal Calls + Telemetry
 
-PDFs are ingested via GCS URIs and sent directly to Gemini 1.5 Flash along with the parsing instruction prompt. 
+PDFs are ingested via GCS URIs and sent directly to Gemini 1.5 Flash along with the parsing instruction prompt.
 
 The following prompt handles full-document parsing; by intentionally mirroring our target response schema, we eliminate potential data conflicts.
 
@@ -475,10 +474,9 @@ prompt_gen = """
 {% endhighlight %}
 </div>
 
-The per-page prompt follows the same principle: it mirrors the response schema and spells out, in detail, exactly how parsing should be performed. Yes, it’s verbose, and the token math can look a bit odd at first glance: 1 PDF page contributes only ~258 input tokens, yet we attach a ~3,156-token prompt to produce roughly ~650 tokens of structured output.  
+The per-page prompt follows the same principle: it mirrors the response schema and spells out, in detail, exactly how parsing should be performed. Yes, it’s verbose, and the token math can look a bit odd at first glance: 1 PDF page contributes only ~258 input tokens, yet we attach a ~3,156-token prompt to produce roughly ~650 tokens of structured output.
 
 Still, with Gemini 1.5 Flash’s **1M-token** context window, a few thousand prompt tokens are negligible. Could this be optimized? Absolutely. But for this project, it proved both reliable and cost-effective.
-
 
 ### Define Prompt for Extracting Chunks
 
@@ -788,7 +786,7 @@ Source files: [03_parsing_tool.ipynb](https://github.com/nikolailen/ai_knowledge
 
 ## 9) Incremental Corpus Update (`CORPUS`)
 
-We initialize LangChain’s BigQueryVectorStore, which is a great “serverless default” for semantic retrieval: simple ops, easy scaling, and good performance at moderate scale.
+We initialize LangChain’s `BigQueryVectorStore`, which is a great “serverless default” for semantic retrieval: simple ops, easy scaling, and good performance at moderate scale.
 
 The vector store is initialized with explicit embedding and distance settings.
 Key libraries: `langchain-google-vertexai`, `langchain-google-community`, `google-cloud-bigquery`
@@ -810,7 +808,7 @@ bq_store = BigQueryVectorStore(
 ```
 Source files: [03_parsing_tool.ipynb](https://github.com/nikolailen/ai_knowledge_base/blob/main/03_parsing_tool.ipynb) (cell 43 lines 1-3; cell 44 lines 1-8)
 
-If you later need consistently low, user-facing latency, LangChain lets you switch to Vertex AI Feature Store Online Store via VertexFSVectorStore with minimal code changes. In practice, BigQuery vector search is commonly in the hundreds of milliseconds to seconds range (≈ 0.3–3.0 s), while Feature Store is built for millisecond online serving (Google reports ~2 ms at the 99th percentile in internal benchmarks). The trade-off is cost: Feature Store provisions always-on online serving capacity, so it’s typically more expensiv, but it’s a clean upgrade path when traffic or dataset size grows.
+If you later need consistently low, user-facing latency, LangChain lets you switch to Vertex AI Feature Store Online Store via `VertexFSVectorStore` with minimal code changes. In practice, BigQuery vector search is commonly in the hundreds of milliseconds to seconds range (≈ 0.3–3.0 s), while Feature Store is built for millisecond online serving (Google reports ~2 ms at the 99th percentile in internal benchmarks). The trade-off is cost: Feature Store provisions always-on online serving capacity, so it’s typically more expensiv, but it’s a clean upgrade path when traffic or dataset size grows.
 
 Here’s an example showing how to switch the vector store backend to Vertex AI Feature Store (online serving) with minimal changes:
 
@@ -836,9 +834,7 @@ fs_store = VertexFSVectorStore(
 
 In my measurements, BigQuery was already fast enough for our document volume, so I  kept the simpler and cheaper BigQuery setup.
 
-
 Incrementality is enforced via **key-based exclusion** and **chunk-quality thresholding** for *text* chunks. During manual inspection, I found that most **short text chunks** (≈ under 300 characters) were just noise—captions without context, table-of-contents fragments, headers/footers, or other boilerplate. That’s why I introduced a minimum-length filter specifically for **text-type chunks**, while still keeping short **non-text chunks** (tables, diagrams, charts, images) since they can be meaningful even when brief.
-
 
 ```sql
 SELECT a_chunk_id, e_chunk_type, g_chunk_contents
@@ -899,7 +895,6 @@ The app also returns:
 - links to specific pages
 - links to full documents in GCS
 
-
 Key libraries (runtime): `langchain_google_community.BigQueryVectorStore`, `langchain_google_vertexai.ChatVertexAI`, `langchain_core.messages`
 
 ```python
@@ -935,10 +930,9 @@ CMD ["python", "05_app_gradio.py"]
 ```
 Source files: [06_Dockerfile:1](https://github.com/nikolailen/ai_knowledge_base/blob/main/06_Dockerfile#L1)
 
-
 ### Parsing outcome and chunk size distribution
 
-Thanks to parallelism, all ~10,000 documents were processed at once in about 6–7 hours. ~30 GB of unstructured PDFs were transformed into a ~500 MB structured BigQuery table with all necessary metadata (~60× compression), so the table storage falls under GCP’s Free Tier and costs $0.
+Thanks to parallelism, all **~10,000 documents** were processed at once in about **6–7 hours**. **~30 GB** of unstructured PDFs were transformed into a **~500 MB** structured BigQuery table with all necessary metadata (**~60× compression**), so the table storage falls under GCP’s Free Tier and costs **$0**.
 
 Below is a chart showing the distribution of chunk sizes by number of characters.
 
@@ -948,25 +942,24 @@ Below is a chart showing the distribution of chunk sizes by number of characters
 
 Estimated shares by length ranges of `g_chunk_contents`:
 
-* 0–500 characters: ~52.5%
-* 500–1000: ~35.6%
-* 1000–1500: ~8.1%
-* 1500–2000: ~2.6%
-* 2000–3000: ~1.2%
-* > 3000: on the chart these are only trace values (very few, fractions of a percent)
+* **0–500 characters: ~52.5%**
+* **500–1000: ~35.6%**
+* **1000–1500: ~8.1%**
+* **1500–2000: ~2.6%**
+* **2000–3000: ~1.2%**
+* **> 3000:** on the chart these are only trace values (very few, fractions of a percent)
 
 **From this it follows:**
 
-* about ~88% of chunks are shorter than 1000 characters,
-* about ~96% are shorter than 1500,
-* almost all are shorter than 2000.
-
+* about **~88%** of chunks are shorter than **1000** characters,
+* about **~96%** are shorter than **1500**,
+* almost all are shorter than **2000**.
 
 ### Conclusion
 
-With Gemini 1.5 Flash plus serverless GCP plumbing, I turned 10,000 messy technical documents into a multimodal, citation-backed AI knowledge base for about €50 and kept maintenance close to zero. The stack will evolve, but the principles won’t: object-centric parsing, schema-controlled output, traceable sources, and pipelines allowing the system to scale with adoption and corpus growth without collapsing under its own complexity. For anyone embarking on a similar journey, I hope my experience will offer some inspiration. 
-You can explore all the code at [my GitHub repository](https://github.com/nikolailen/ai_knowledge_base). 
+With Gemini 1.5 Flash plus serverless GCP plumbing, I turned 10,000 messy technical documents into a **multimodal, citation-backed AI knowledge base** for about **~€50** and kept **maintenance close to zero**. The stack will evolve, but the principles won’t: **object-centric parsing**, **schema-controlled output**, **traceable sources**, and **scalable pipelines** allowing the system to scale with adoption and corpus growth without collapsing under its own complexity. For anyone embarking on a similar journey, I hope my experience will offer some inspiration.
+
+You can explore all the code at [my GitHub repository](https://github.com/nikolailen/ai_knowledge_base).
+
 Feel free to connect with me on [LinkedIn](https://www.linkedin.com/in/niklen/)!
-
-
 
