@@ -957,3 +957,8 @@ Check the full code at [my GitHub repository](https://github.com/nikolailen/ai_k
 
 Feel free to connect on [LinkedIn](https://www.linkedin.com/in/niklen/)!
 
+## Contact
+
+- Nikolai Len
+- 👤 [LinkedIn](https://www.linkedin.com/in/niklen/)
+
