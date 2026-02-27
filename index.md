@@ -953,13 +953,13 @@ Estimated shares by length ranges of `g_chunk_contents`:
 
 With **Gemini 1.5 Flash** plus serverless **GCP** plumbing, I turned **~10,000** messy technical documents into a **multimodal**, citation-backed **AI knowledge base** for about **~€50** and kept maintenance close to **zero**. The stack will evolve, but the principles won’t: **object-centric parsing**, **schema-controlled output**, **traceable sources**, and **scalable pipelines** that allow the system to handle increased adoption and corpus growth without collapsing under its own complexity. For anyone embarking on a similar journey, I hope my experience will offer some inspiration.
 
-Check the full code at [my GitHub repository](https://github.com/nikolailen/ai_knowledge_base).
+Check the full code at [my GitHub repository](https://github.com/nicolas-len/gcp-multimodal-ai-rag).
 
-Feel free to connect on [LinkedIn](https://www.linkedin.com/in/niklen/)!
+Feel free to connect on [LinkedIn](https://www.linkedin.com/in/niclen/)!
 
 ## Contact
 
-- Nikolai Len
-- 💻 Code repository: [ai_knowledge_base](https://github.com/nikolailen/ai_knowledge_base)
-- 👤 [LinkedIn](https://www.linkedin.com/in/niklen/)
+- [Nicolas Len](https://www.linkedin.com/in/niclen/)
+- 💻 Code repository: [gcp-multimodal-ai-rag](https://github.com/nicolas-len/gcp-multimodal-ai-rag)
+- 👤 [LinkedIn](https://www.linkedin.com/in/niclen/)
 
