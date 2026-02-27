@@ -957,8 +957,3 @@ Check the full code at [my GitHub repository](https://github.com/nicolas-len/gcp
 
 Feel free to connect on [LinkedIn](https://www.linkedin.com/in/niclen/)!
 
-## Contact
-
-- [Nicolas Len](https://www.linkedin.com/in/niclen/)
-- 💻 Code repository: [gcp-multimodal-ai-rag](https://github.com/nicolas-len/gcp-multimodal-ai-rag)
-
